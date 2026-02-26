@@ -8,11 +8,11 @@
         body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #1a1a1a; color: white; }
         nav { background: #2d2d2d; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #3e8e41; }
         .logo { font-size: 1.5rem; font-weight: bold; color: #3e8e41; }
-        .nav-links a { color: white; margin-left: 20px; text-decoration: none; }
+        .nav-links { display: flex; align-items: center; gap: 10px; }
+        .nav-links input { padding: 5px; background: #444; border: 1px solid #555; color: white; border-radius: 4px; width: 120px; }
         
         .container { max-width: 1000px; margin: 20px auto; padding: 20px; }
         
-        /* Leaderboard Section */
         .board-header { display: flex; justify-content: space-between; align-items: center; background: #333; padding: 15px; border-radius: 8px; }
         select { padding: 8px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; }
         
@@ -20,18 +20,16 @@
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
         th { background: #3e8e41; }
 
-        /* Form Styling */
         .modal { background: #2d2d2d; padding: 25px; border-radius: 8px; border: 1px solid #444; margin-top: 30px; }
         .form-group { margin-bottom: 15px; }
         label { display: block; margin-bottom: 5px; font-weight: bold; }
-        input[type="text"], input[type="url"], input[type="password"] { width: 100%; padding: 10px; box-sizing: border-box; background: #444; border: 1px solid #555; color: white; }
+        input[type="text"], input[type="url"], input[type="password"], input[type="email"] { width: 100%; padding: 10px; box-sizing: border-box; background: #444; border: 1px solid #555; color: white; }
         
         .btn { background: #3e8e41; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn:hover { background: #45a049; }
+        .btn-blue { background: #4285F4; }
         
         .toggle-container { display: flex; align-items: center; gap: 10px; }
-
-        /* Forum Styling */
         .forum-box { background: #252525; padding: 15px; border-left: 4px solid #3e8e41; margin-bottom: 10px; }
         #forum-container { max-height: 400px; overflow-y: auto; margin-top: 20px; }
     </style>
@@ -40,15 +38,34 @@
 
 <nav>
     <div class="logo">MC SPEEDRUNS</div>
-    <div class="nav-links">
-        <a href="#forum-section">Forums</a>
-        <a href="#leaderboard">Categories</a>
-        <button id="loginBtn" class="btn" style="background: #4285F4;">Login with Google</button>
+    <div class="nav-links" id="auth-ui">
+        <input type="email" id="loginEmail" placeholder="Email">
+        <input type="password" id="loginPass" placeholder="Password">
+        <button id="loginBtn" class="btn btn-blue">Login</button>
+        <button id="showSignup" class="btn" style="background:#555">Sign Up</button>
     </div>
 </nav>
 
 <div class="container">
     
+    <section id="signup-section" class="modal" style="display:none; margin-bottom: 40px; border-color: #4285F4;">
+        <h3>Create Account</h3>
+        <div class="form-group">
+            <label>MC Username (Display Name)</label>
+            <input type="text" id="regName" placeholder="Steve_Runs">
+        </div>
+        <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="regEmail" placeholder="email@example.com">
+        </div>
+        <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="regPass" placeholder="Min 6 characters">
+        </div>
+        <button id="registerBtn" class="btn btn-blue">Create Account</button>
+        <button onclick="document.getElementById('signup-section').style.display='none'" class="btn" style="background:none; color:#bbb">Cancel</button>
+    </section>
+
     <section id="leaderboard">
         <div class="board-header">
             <h2>Leaderboard</h2>
@@ -63,7 +80,6 @@
                 </select>
             </div>
         </div>
-
         <table>
             <thead>
                 <tr>
@@ -74,8 +90,7 @@
                     <th>Video</th>
                 </tr>
             </thead>
-            <tbody id="boardBody">
-                </tbody>
+            <tbody id="boardBody"></tbody>
         </table>
     </section>
 
@@ -92,22 +107,18 @@
                 <option>All Advancements</option>
             </select>
         </div>
-
         <div class="form-group toggle-container">
             <label>Glitchless Mode:</label>
             <input type="checkbox" id="glitchlessToggle" checked>
         </div>
-
         <div class="form-group">
             <label>Time (HH:MM:SS)</label>
             <input type="text" id="runTime" placeholder="00:00:00">
         </div>
-
         <div class="form-group">
             <label>Video Evidence URL</label>
             <input type="url" id="runVideo" placeholder="YouTube or Twitch link">
         </div>
-
         <button id="submitBtn" class="btn">Submit Run to Moderators</button>
     </section>
 
@@ -117,15 +128,13 @@
             <input type="text" id="forumInput" placeholder="Write a forum post..." style="flex-grow: 1;">
             <button id="postBtn" class="btn">Post</button>
         </div>
-        <div id="forum-container">
-            </div>
+        <div id="forum-container"></div>
     </section>
-
 </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -140,25 +149,47 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
+
+    // SIGNUP LOGIC
+    document.getElementById('showSignup').onclick = () => document.getElementById('signup-section').style.display = 'block';
+    
+    document.getElementById('registerBtn').onclick = async () => {
+        const name = document.getElementById('regName').value;
+        const email = document.getElementById('regEmail').value;
+        const pass = document.getElementById('regPass').value;
+        
+        try {
+            const res = await createUserWithEmailAndPassword(auth, email, pass);
+            await updateProfile(res.user, { displayName: name });
+            alert("Account Created!");
+            document.getElementById('signup-section').style.display = 'none';
+        } catch (e) { alert(e.message); }
+    };
 
     // LOGIN LOGIC
-    const loginBtn = document.getElementById('loginBtn');
-    loginBtn.onclick = () => signInWithPopup(auth, provider);
+    document.getElementById('loginBtn').onclick = () => {
+        const email = document.getElementById('loginEmail').value;
+        const pass = document.getElementById('loginPass').value;
+        signInWithEmailAndPassword(auth, email, pass).catch(e => alert(e.message));
+    };
 
+    // AUTH STATE
     onAuthStateChanged(auth, (user) => {
+        const nav = document.getElementById('auth-ui');
         if (user) {
-            loginBtn.innerText = user.displayName;
-            loginBtn.style.background = "#3e8e41";
+            nav.innerHTML = `<span style="color:#3e8e41; font-weight:bold">Welcome, ${user.displayName || user.email}</span>
+                             <button id="logoutBtn" class="btn" style="background:#cc3300; padding: 5px 10px;">Logout</button>`;
+            document.getElementById('logoutBtn').onclick = () => signOut(auth);
+        } else {
+            // Restore Login UI if logged out (Refresh page or update innerHTML)
         }
     });
 
-    // SUBMIT RUN LOGIC
+    // SUBMIT RUN
     document.getElementById('submitBtn').onclick = async () => {
-        if (!auth.currentUser) return alert("Log in first!");
-        
+        if (!auth.currentUser) return alert("You must be logged in to submit a run!");
         const runData = {
-            player: auth.currentUser.displayName,
+            player: auth.currentUser.displayName || "Anonymous",
             category: document.getElementById('submitCategory').value,
             glitchless: document.getElementById('glitchlessToggle').checked,
             time: document.getElementById('runTime').value,
@@ -166,37 +197,27 @@
             date: new Date().toISOString().split('T')[0],
             timestamp: new Date()
         };
-
-        try {
-            await addDoc(collection(db, "runs"), runData);
-            alert("Run submitted successfully!");
-        } catch (e) { alert("Error: " + e.message); }
+        await addDoc(collection(db, "runs"), runData);
+        alert("Run submitted!");
     };
 
-    // LEADERBOARD LOAD
+    // LOAD LEADERBOARD
     onSnapshot(query(collection(db, "runs"), orderBy("timestamp", "desc")), (snap) => {
-        const boardBody = document.getElementById('boardBody');
-        boardBody.innerHTML = "";
+        const body = document.getElementById('boardBody');
+        body.innerHTML = "";
         let rank = 1;
         snap.forEach(doc => {
             const r = doc.data();
-            boardBody.innerHTML += `
-                <tr>
-                    <td>${rank++}</td>
-                    <td>${r.player}</td>
-                    <td>${r.time}</td>
-                    <td>${r.date}</td>
-                    <td><a href="${r.video}" target="_blank" style="color: #3e8e41;">Watch</a></td>
-                </tr>`;
+            body.innerHTML += `<tr><td>${rank++}</td><td>${r.player}</td><td>${r.time}</td><td>${r.date}</td><td><a href="${r.video}" target="_blank" style="color: #3e8e41;">Watch</a></td></tr>`;
         });
     });
 
-    // FORUM LOGIC
+    // FORUM
     document.getElementById('postBtn').onclick = async () => {
         const msg = document.getElementById('forumInput').value;
-        if (!auth.currentUser || !msg) return;
+        if (!auth.currentUser || !msg) return alert("Log in to post!");
         await addDoc(collection(db, "forum"), {
-            user: auth.currentUser.displayName,
+            user: auth.currentUser.displayName || "Anonymous",
             text: msg,
             timestamp: new Date()
         });
@@ -208,13 +229,9 @@
         container.innerHTML = "";
         snap.forEach(doc => {
             const p = doc.data();
-            container.innerHTML += `
-                <div class="forum-box">
-                    <strong>${p.user}:</strong> ${p.text}
-                </div>`;
+            container.innerHTML += `<div class="forum-box"><strong>${p.user}:</strong> ${p.text}</div>`;
         });
     });
 </script>
-
 </body>
 </html>
