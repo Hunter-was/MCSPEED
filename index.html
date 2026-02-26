@@ -27,6 +27,7 @@
         .btn { background: #3e8e41; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
         .btn:hover { background: #45a049; }
         .btn-blue { background: #4285F4; }
+        .btn-red { background: #ff4444; padding: 5px 10px; font-size: 0.8rem; }
         
         .admin-only { display: none; border: 2px dashed #ffcc00; background: #332b00; margin-bottom: 30px; }
         .forum-box { background: #252525; padding: 15px; border-left: 4px solid #3e8e41; margin-bottom: 10px; }
@@ -90,7 +91,7 @@
         <table>
             <thead>
                 <tr>
-                    <th>Rank</th><th>Player</th><th>Time</th><th>Date</th><th>Video</th>
+                    <th>Rank</th><th>Player</th><th>Time</th><th>Date</th><th>Video</th><th class="mod-action" style="display:none;">Action</th>
                 </tr>
             </thead>
             <tbody id="boardBody"></tbody>
@@ -126,7 +127,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, updateProfile, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
-    import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, query, where, orderBy, onSnapshot, limit, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
 
     const firebaseConfig = {
         apiKey: "AIzaSyD01lZzZiuyzHUHnIdt3CGWd82kGq5GOq0",
@@ -141,28 +142,36 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
 
+    // ADMIN EMAILS (Fixed spelling)
+    const admins = ["rowankehoe@gmail.com", "consider.boarding.school@gmail.com"];
+
     // AUTH ACTIONS
     document.getElementById('showSignup').onclick = () => document.getElementById('signup-section').style.display = 'block';
+    
     document.getElementById('registerBtn').onclick = async () => {
-        const name = document.getElementById('regName').value;
-        const email = document.getElementById('regEmail').value;
-        const pass = document.getElementById('regPass').value;
         try {
-            const res = await createUserWithEmailAndPassword(auth, email, pass);
-            await updateProfile(res.user, { displayName: name });
+            const res = await createUserWithEmailAndPassword(auth, document.getElementById('regEmail').value, document.getElementById('regPass').value);
+            await updateProfile(res.user, { displayName: document.getElementById('regName').value });
             location.reload();
         } catch (e) { alert(e.message); }
     };
 
     document.getElementById('loginBtn').onclick = () => {
-        signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value).catch(e => alert(e.message));
+        signInWithEmailAndPassword(auth, document.getElementById('loginEmail').value, document.getElementById('loginPass').value)
+        .then(() => location.reload())
+        .catch(e => alert(e.message));
     };
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            document.getElementById('auth-ui').innerHTML = `<span>${user.displayName || user.email}</span><button onclick="auth.signOut()" class="btn" style="background:#cc3300; margin-left:10px;">Logout</button>`;
-            const admins = ["rowankehoe@gmail.com", "cosider.boarding.school@gmail.com"];
-            if (admins.includes(user.email)) document.getElementById('adminPanel').style.display = 'block';
+            document.getElementById('auth-ui').innerHTML = `<span>${user.displayName || user.email}</span><button id="logoutBtn" class="btn" style="background:#cc3300; margin-left:10px;">Logout</button>`;
+            document.getElementById('logoutBtn').onclick = () => signOut(auth).then(() => location.reload());
+            
+            if (admins.includes(user.email.toLowerCase())) {
+                document.getElementById('adminPanel').style.display = 'block';
+                // Show delete column headers
+                document.querySelectorAll('.mod-action').forEach(el => el.style.display = 'table-cell');
+            }
         }
     });
 
@@ -179,29 +188,54 @@
         if (res.ok) alert("Sent to mods!");
     };
 
-    // MODERATOR APPROVAL
+    // MODERATOR APPROVAL (ADD RUN)
     document.getElementById('modApproveBtn').onclick = async () => {
-        await addDoc(collection(db, "runs"), {
-            player: document.getElementById('modPlayer').value,
-            time: document.getElementById('modTime').value,
-            video: document.getElementById('modVideo').value,
-            category: document.getElementById('modCategory').value,
-            date: new Date().toISOString().split('T')[0],
-            timestamp: new Date()
-        });
-        alert("Published!");
+        try {
+            await addDoc(collection(db, "runs"), {
+                player: document.getElementById('modPlayer').value,
+                time: document.getElementById('modTime').value,
+                video: document.getElementById('modVideo').value,
+                category: document.getElementById('modCategory').value,
+                date: new Date().toISOString().split('T')[0],
+                timestamp: new Date()
+            });
+            alert("Published!");
+            location.reload();
+        } catch (e) { alert("Error: " + e.message); }
     };
 
-    // LIVE LEADERBOARD (WITH FILTER)
+    // DELETE RUN FUNCTION
+    window.deleteRun = async (runId) => {
+        if (confirm("Delete this run forever?")) {
+            try {
+                await deleteDoc(doc(db, "runs", runId));
+                alert("Deleted!");
+            } catch (e) { alert("Error deleting: " + e.message); }
+        }
+    };
+
+    // LIVE LEADERBOARD
     const loadBoard = (cat) => {
         const q = query(collection(db, "runs"), where("category", "==", cat), orderBy("time", "asc"));
         onSnapshot(q, (snap) => {
             const body = document.getElementById('boardBody');
             body.innerHTML = ""; let rank = 1;
-            snap.forEach(doc => {
-                const r = doc.data();
-                body.innerHTML += `<tr><td>${rank++}</td><td>${r.player}</td><td>${r.time}</td><td>${r.date}</td><td><a href="${r.video}" target="_blank" style="color:#3e8e41">Link</a></td></tr>`;
+            snap.forEach(runDoc => {
+                const r = runDoc.data();
+                const isMod = auth.currentUser && admins.includes(auth.currentUser.email.toLowerCase());
+                
+                body.innerHTML += `
+                    <tr>
+                        <td>${rank++}</td>
+                        <td>${r.player}</td>
+                        <td>${r.time}</td>
+                        <td>${r.date}</td>
+                        <td><a href="${r.video}" target="_blank" style="color:#3e8e41">Link</a></td>
+                        ${isMod ? `<td><button class="btn btn-red" onclick="deleteRun('${runDoc.id}')">Delete</button></td>` : ''}
+                    </tr>`;
             });
+        }, (err) => {
+            if(err.message.includes("index")) alert("IMPORTANT: You must create an index in Firebase. Check the F12 console for the link!");
         });
     };
     document.getElementById('categorySelect').onchange = (e) => loadBoard(e.target.value);
