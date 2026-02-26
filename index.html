@@ -30,6 +30,10 @@
         .btn:hover { background: #45a049; }
         
         .toggle-container { display: flex; align-items: center; gap: 10px; }
+
+        /* Forum Styling */
+        .forum-box { background: #252525; padding: 15px; border-left: 4px solid #3e8e41; margin-bottom: 10px; }
+        #forum-container { max-height: 400px; overflow-y: auto; margin-top: 20px; }
     </style>
 </head>
 <body>
@@ -37,9 +41,9 @@
 <nav>
     <div class="logo">MC SPEEDRUNS</div>
     <div class="nav-links">
-        <a href="#">Forums</a>
-        <a href="#">Categories</a>
-        <button class="btn" style="background: #4285F4;">Login with Google</button>
+        <a href="#forum-section">Forums</a>
+        <a href="#leaderboard">Categories</a>
+        <button id="loginBtn" class="btn" style="background: #4285F4;">Login with Google</button>
     </div>
 </nav>
 
@@ -71,14 +75,7 @@
                 </tr>
             </thead>
             <tbody id="boardBody">
-                <tr>
-                    <td>1</td>
-                    <td>Dreamer22</td>
-                    <td>12:42</td>
-                    <td>2026-02-20</td>
-                    <td><a href="#" style="color: #3e8e41;">Link</a></td>
-                </tr>
-            </tbody>
+                </tbody>
         </table>
     </section>
 
@@ -87,13 +84,8 @@
     <section id="submit-run" class="modal">
         <h3>Submit a New Run</h3>
         <div class="form-group">
-            <label>Username</label>
-            <input type="text" placeholder="Enter your username">
-        </div>
-        
-        <div class="form-group">
             <label>Category</label>
-            <select style="width: 100%;">
+            <select id="submitCategory" style="width: 100%;">
                 <option>Any% Glitchless (F3)</option>
                 <option>Any% Glitchless (No F3)</option>
                 <option>Any% Glitched</option>
@@ -103,35 +95,125 @@
 
         <div class="form-group toggle-container">
             <label>Glitchless Mode:</label>
-            <input type="checkbox" checked>
+            <input type="checkbox" id="glitchlessToggle" checked>
         </div>
 
         <div class="form-group">
             <label>Time (HH:MM:SS)</label>
-            <input type="text" placeholder="00:00:00">
+            <input type="text" id="runTime" placeholder="00:00:00">
         </div>
 
         <div class="form-group">
             <label>Video Evidence URL</label>
-            <input type="url" placeholder="YouTube or Twitch link">
+            <input type="url" id="runVideo" placeholder="YouTube or Twitch link">
         </div>
 
-        <button class="btn">Submit Run to Moderators</button>
+        <button id="submitBtn" class="btn">Submit Run to Moderators</button>
     </section>
 
-    <section style="margin-top: 40px;">
+    <section id="forum-section" style="margin-top: 40px;">
         <h3>Community Forums</h3>
-        <div style="background: #252525; padding: 15px; border-left: 4px solid #3e8e41;">
-            <strong>General Discussion:</strong> New 1.21 strategies found?
-            <p style="font-size: 0.8rem; color: #888;">Last post by Steve_Run 5 mins ago</p>
+        <div class="form-group" style="display: flex; gap: 10px;">
+            <input type="text" id="forumInput" placeholder="Write a forum post..." style="flex-grow: 1;">
+            <button id="postBtn" class="btn">Post</button>
         </div>
+        <div id="forum-container">
+            </div>
     </section>
 
 </div>
 
-<script>
-    // Future logic for Google Login and Form handling would go here
-    console.log("MC Speedruns Loaded");
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-app.js";
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, query, orderBy, onSnapshot, limit } from "https://www.gstatic.com/firebasejs/11.0.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+        apiKey: "AIzaSyD01lZzZiuyzHUHnIdt3CGWd82kGq5GOq0",
+        authDomain: "mcspeeddot.firebaseapp.com",
+        projectId: "mcspeeddot",
+        storageBucket: "mcspeeddot.firebasestorage.app",
+        messagingSenderId: "592845974193",
+        appId: "1:592845974193:web:91fd5974ca6cd68dafd090"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
+
+    // LOGIN LOGIC
+    const loginBtn = document.getElementById('loginBtn');
+    loginBtn.onclick = () => signInWithPopup(auth, provider);
+
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            loginBtn.innerText = user.displayName;
+            loginBtn.style.background = "#3e8e41";
+        }
+    });
+
+    // SUBMIT RUN LOGIC
+    document.getElementById('submitBtn').onclick = async () => {
+        if (!auth.currentUser) return alert("Log in first!");
+        
+        const runData = {
+            player: auth.currentUser.displayName,
+            category: document.getElementById('submitCategory').value,
+            glitchless: document.getElementById('glitchlessToggle').checked,
+            time: document.getElementById('runTime').value,
+            video: document.getElementById('runVideo').value,
+            date: new Date().toISOString().split('T')[0],
+            timestamp: new Date()
+        };
+
+        try {
+            await addDoc(collection(db, "runs"), runData);
+            alert("Run submitted successfully!");
+        } catch (e) { alert("Error: " + e.message); }
+    };
+
+    // LEADERBOARD LOAD
+    onSnapshot(query(collection(db, "runs"), orderBy("timestamp", "desc")), (snap) => {
+        const boardBody = document.getElementById('boardBody');
+        boardBody.innerHTML = "";
+        let rank = 1;
+        snap.forEach(doc => {
+            const r = doc.data();
+            boardBody.innerHTML += `
+                <tr>
+                    <td>${rank++}</td>
+                    <td>${r.player}</td>
+                    <td>${r.time}</td>
+                    <td>${r.date}</td>
+                    <td><a href="${r.video}" target="_blank" style="color: #3e8e41;">Watch</a></td>
+                </tr>`;
+        });
+    });
+
+    // FORUM LOGIC
+    document.getElementById('postBtn').onclick = async () => {
+        const msg = document.getElementById('forumInput').value;
+        if (!auth.currentUser || !msg) return;
+        await addDoc(collection(db, "forum"), {
+            user: auth.currentUser.displayName,
+            text: msg,
+            timestamp: new Date()
+        });
+        document.getElementById('forumInput').value = "";
+    };
+
+    onSnapshot(query(collection(db, "forum"), orderBy("timestamp", "desc"), limit(20)), (snap) => {
+        const container = document.getElementById('forum-container');
+        container.innerHTML = "";
+        snap.forEach(doc => {
+            const p = doc.data();
+            container.innerHTML += `
+                <div class="forum-box">
+                    <strong>${p.user}:</strong> ${p.text}
+                </div>`;
+        });
+    });
 </script>
 
 </body>
