@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MC Speedruns | The Home of Minecraft Racing</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; background: #1a1a1a; color: white; }
+        nav { background: #2d2d2d; padding: 1rem; display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #3e8e41; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #3e8e41; }
+        .nav-links a { color: white; margin-left: 20px; text-decoration: none; }
+        
+        .container { max-width: 1000px; margin: 20px auto; padding: 20px; }
+        
+        /* Leaderboard Section */
+        .board-header { display: flex; justify-content: space-between; align-items: center; background: #333; padding: 15px; border-radius: 8px; }
+        select { padding: 8px; background: #444; color: white; border: 1px solid #555; border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; background: #252525; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid #333; }
+        th { background: #3e8e41; }
+
+        /* Form Styling */
+        .modal { background: #2d2d2d; padding: 25px; border-radius: 8px; border: 1px solid #444; margin-top: 30px; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        input[type="text"], input[type="url"], input[type="password"] { width: 100%; padding: 10px; box-sizing: border-box; background: #444; border: 1px solid #555; color: white; }
+        
+        .btn { background: #3e8e41; color: white; padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; }
+        .btn:hover { background: #45a049; }
+        
+        .toggle-container { display: flex; align-items: center; gap: 10px; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="logo">MC SPEEDRUNS</div>
+    <div class="nav-links">
+        <a href="#">Forums</a>
+        <a href="#">Categories</a>
+        <button class="btn" style="background: #4285F4;">Login with Google</button>
+    </div>
+</nav>
+
+<div class="container">
+    
+    <section id="leaderboard">
+        <div class="board-header">
+            <h2>Leaderboard</h2>
+            <div>
+                <label>Category:</label>
+                <select id="categorySelect">
+                    <option>Any% Glitchless (F3)</option>
+                    <option>Any% Glitchless (No F3)</option>
+                    <option>Any% Glitched</option>
+                    <option>All Advancements</option>
+                    <option>Enter Portal</option>
+                </select>
+            </div>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Time</th>
+                    <th>Date</th>
+                    <th>Video</th>
+                </tr>
+            </thead>
+            <tbody id="boardBody">
+                <tr>
+                    <td>1</td>
+                    <td>Dreamer22</td>
+                    <td>12:42</td>
+                    <td>2026-02-20</td>
+                    <td><a href="#" style="color: #3e8e41;">Link</a></td>
+                </tr>
+            </tbody>
+        </table>
+    </section>
+
+    <hr style="margin: 40px 0; border: 0; border-top: 1px solid #444;">
+
+    <section id="submit-run" class="modal">
+        <h3>Submit a New Run</h3>
+        <div class="form-group">
+            <label>Username</label>
+            <input type="text" placeholder="Enter your username">
+        </div>
+        
+        <div class="form-group">
+            <label>Category</label>
+            <select style="width: 100%;">
+                <option>Any% Glitchless (F3)</option>
+                <option>Any% Glitchless (No F3)</option>
+                <option>Any% Glitched</option>
+                <option>All Advancements</option>
+            </select>
+        </div>
+
+        <div class="form-group toggle-container">
+            <label>Glitchless Mode:</label>
+            <input type="checkbox" checked>
+        </div>
+
+        <div class="form-group">
+            <label>Time (HH:MM:SS)</label>
+            <input type="text" placeholder="00:00:00">
+        </div>
+
+        <div class="form-group">
+            <label>Video Evidence URL</label>
+            <input type="url" placeholder="YouTube or Twitch link">
+        </div>
+
+        <button class="btn">Submit Run to Moderators</button>
+    </section>
+
+    <section style="margin-top: 40px;">
+        <h3>Community Forums</h3>
+        <div style="background: #252525; padding: 15px; border-left: 4px solid #3e8e41;">
+            <strong>General Discussion:</strong> New 1.21 strategies found?
+            <p style="font-size: 0.8rem; color: #888;">Last post by Steve_Run 5 mins ago</p>
+        </div>
+    </section>
+
+</div>
+
+<script>
+    // Future logic for Google Login and Form handling would go here
+    console.log("MC Speedruns Loaded");
+</script>
+
+</body>
+</html>
