@@ -178,30 +178,44 @@
         const nav = document.getElementById('auth-ui');
         if (user) {
             nav.innerHTML = `<span style="color:#3e8e41; font-weight:bold">Welcome, ${user.displayName || user.email}</span>
-                             <button id="logoutBtn" class="btn" style="background:#cc3300; padding: 5px 10px;">Logout</button>`;
+                             <button id="logoutBtn" class="btn" style="background:#cc3300; padding: 5px 10px; margin-left:10px;">Logout</button>`;
             document.getElementById('logoutBtn').onclick = () => signOut(auth);
-        } else {
-            // Restore Login UI if logged out (Refresh page or update innerHTML)
         }
     });
 
-    // SUBMIT RUN
+    // SUBMIT RUN (SENT TO MODS VIA FORMSPREE)
     document.getElementById('submitBtn').onclick = async () => {
         if (!auth.currentUser) return alert("You must be logged in to submit a run!");
+        
         const runData = {
-            player: auth.currentUser.displayName || "Anonymous",
+            player: auth.currentUser.displayName || auth.currentUser.email,
             category: document.getElementById('submitCategory').value,
-            glitchless: document.getElementById('glitchlessToggle').checked,
+            glitchless: document.getElementById('glitchlessToggle').checked ? "Yes" : "No",
             time: document.getElementById('runTime').value,
             video: document.getElementById('runVideo').value,
-            date: new Date().toISOString().split('T')[0],
-            timestamp: new Date()
+            dateSubmitted: new Date().toLocaleString()
         };
-        await addDoc(collection(db, "runs"), runData);
-        alert("Run submitted!");
+
+        try {
+            const response = await fetch("https://formspree.io/f/mlgwzjob", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(runData)
+            });
+
+            if (response.ok) {
+                alert("GG! Your run has been sent to the Moderators for review.");
+                document.getElementById('runTime').value = "";
+                document.getElementById('runVideo').value = "";
+            } else {
+                alert("Submission failed. Try again.");
+            }
+        } catch (e) {
+            alert("Error: " + e.message);
+        }
     };
 
-    // LOAD LEADERBOARD
+    // LOAD LEADERBOARD (STILL FROM FIREBASE)
     onSnapshot(query(collection(db, "runs"), orderBy("timestamp", "desc")), (snap) => {
         const body = document.getElementById('boardBody');
         body.innerHTML = "";
